@@ -11,16 +11,18 @@ set -euo pipefail
 SRC="${PLUGIN_AVAILABLE_PATH:-/var/lib/dokku/plugins/available}/nginx-vhosts/templates/nginx.conf.sigil"
 OUT_DIR="${NO_HTTP2_DATA_DIR:-${DOKKU_LIB_ROOT:-/var/lib/dokku}/data/no-http2}"
 OUT="$OUT_DIR/nginx.conf.sigil"
-HTTP2='listen[^;]*[[:space:]]http2[[:space:];]|^[[:space:]]*http2[[:space:]]+on'
+HTTP2='^[[:space:]]*listen[[:space:]][^;]*http2|^[[:space:]]*http2[[:space:]]+on'
 
 mkdir -p "$OUT_DIR"
 TMP="$(mktemp "$OUT.XXXXXX")"
 trap 'rm -f "$TMP"' EXIT
 
-# nginx >= 1.25.1 branch: a standalone "http2 on;". Older branch: "listen ... ssl http2;".
+# Template forms: "http2 on;" (v0.38+, nginx >= 1.25.1), "listen ... ssl http2;" and
+# "ssl {{ if eq $.HTTP2_SUPPORTED "true" }}http2[{{ else if ... }}spdy]{{ end }}" (v0.22-v0.37).
 sed -E \
   -e '/^[[:space:]]*http2[[:space:]]+on;[[:space:]]*$/d' \
-  -e 's/[[:space:]]+http2;/;/' \
+  -e '/^[[:space:]]*listen[[:space:]]/s/[[:space:]]*[{][{] if eq [$][.]HTTP2_SUPPORTED "true" [}][}]http2([{][{] else if eq [$][.]SPDY_SUPPORTED "true" [}][}]spdy)?[{][{] end [}][}]//g' \
+  -e '/^[[:space:]]*listen[[:space:]]/s/[[:space:]]+http2([[:space:];])/\1/g' \
   "$SRC" >"$TMP"
 
 if grep -qE "$HTTP2" "$TMP"; then

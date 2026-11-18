@@ -1,4 +1,4 @@
 [plugin]
 description = "serves Dokku's nginx vhost template without HTTP/2"
-version = "0.1.0"
+version = "0.1.1"
 [plugin.config]

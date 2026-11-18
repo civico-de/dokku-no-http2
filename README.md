@@ -9,9 +9,11 @@ nginx HTTP/2 vulnerability is unpatched in the distribution package.
 
 ## How it works
 
-The plugin implements Dokku's `nginx-app-template-source` trigger. For the vhost
-template (`app-config`) it reads the stock template from the `nginx-vhosts` plugin,
-removes `http2 on;` lines and the `http2` flag on `listen` lines, writes the result to
+The plugin implements Dokku's `nginx-app-template-source` trigger, which Dokku has
+since v0.22. Older releases never call it, so there the plugin has no effect. For the
+vhost template (`app-config`) it reads the stock template from the `nginx-vhosts` plugin,
+removes `http2 on;` lines and every `http2` on `listen` lines, including the
+`{{ if eq $.HTTP2_SUPPORTED "true" }}http2{{ end }}` form of v0.22 to v0.37, writes the result to
 `/var/lib/dokku/data/no-http2/nginx.conf.sigil` and hands that path to Dokku. Every
 other template type stays Dokku's.
 
@@ -29,7 +31,7 @@ Clients that need HTTP/2, such as native gRPC, stop working.
 ## Install
 
 ```sh
-dokku plugin:install https://github.com/civico-de/dokku-no-http2.git --committish 0.1.0 --name no-http2
+dokku plugin:install https://github.com/civico-de/dokku-no-http2.git --committish 0.1.1 --name no-http2
 dokku proxy:build-config --all
 systemctl restart nginx
 ```
