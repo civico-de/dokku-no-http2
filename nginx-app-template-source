@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# nginx-app-template-source trigger: hand Dokku its own vhost template with HTTP/2 removed.
+# Args: APP TEMPLATE_TYPE. Only the vhost template ("app-config") is replaced.
+#
+# Fail-closed: the template is Dokku's, not a stable API. If HTTP/2 survives the edit
+# (a new listen flag, a new directive), the trigger exits non-zero and the proxy build fails.
+set -euo pipefail
+
+[[ "${2:-}" == "app-config" ]] || exit 0
+
+SRC="${PLUGIN_AVAILABLE_PATH:-/var/lib/dokku/plugins/available}/nginx-vhosts/templates/nginx.conf.sigil"
+OUT_DIR="${NO_HTTP2_DATA_DIR:-${DOKKU_LIB_ROOT:-/var/lib/dokku}/data/no-http2}"
+OUT="$OUT_DIR/nginx.conf.sigil"
+HTTP2='listen[^;]*[[:space:]]http2[[:space:];]|^[[:space:]]*http2[[:space:]]+on'
+
+mkdir -p "$OUT_DIR"
+TMP="$(mktemp "$OUT.XXXXXX")"
+trap 'rm -f "$TMP"' EXIT
+
+# nginx >= 1.25.1 branch: a standalone "http2 on;". Older branch: "listen ... ssl http2;".
+sed -E \
+  -e '/^[[:space:]]*http2[[:space:]]+on;[[:space:]]*$/d' \
+  -e 's/[[:space:]]+http2;/;/' \
+  "$SRC" >"$TMP"
+
+if grep -qE "$HTTP2" "$TMP"; then
+  echo " !     no-http2: $SRC still enables HTTP/2 after the edit, refusing to render it" >&2
+  grep -nE "$HTTP2" "$TMP" >&2
+  exit 1
+fi
+
+chmod 0644 "$TMP"
+mv -f "$TMP" "$OUT"
+trap - EXIT
+echo "$OUT"

@@ -1,0 +1,7 @@
+Copyright (C) 2026 civico GmbH. All rights reserved.
+
+This software is proprietary. It is not licensed for redistribution or use
+outside the terms agreed with the copyright holder.
+
+The files in test/fixtures/ are copies of Dokku's nginx.conf.sigil,
+Copyright (C) 2014 Jeff Lindsay, MIT License.
